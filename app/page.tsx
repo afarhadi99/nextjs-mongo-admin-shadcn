@@ -1,101 +1,227 @@
-import Image from "next/image";
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DataTable from "@/components/DataTable";
+import UserDrawer from "@/components/UserDrawer";
+import MovieDrawer from "@/components/MovieDrawer";
+import AddMovieButton from "@/components/AddMovieButton";
+import { ReactNode } from "react";
+
+interface User {
+  id: string;
+  name: string;
+  email?: string | null;
+  image?: string | null;
+}
+
+interface Movie {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnailUrl: string;
+  genre: string;
+  duration: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [users, setUsers] = useState<User[]>([]);
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/users");
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      } else {
+        console.error("Error fetching users", response);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    }
+  }, []);
+
+  const fetchMovies = useCallback(async () => {
+    try {
+      const response = await fetch("/api/movies");
+      if (response.ok) {
+        const data = await response.json();
+        setMovies(data);
+      } else {
+        console.error("Error fetching movies", response);
+      }
+    } catch (error) {
+      console.error("Failed to fetch movies", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchMovies();
+  }, [fetchUsers, fetchMovies]);
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+  };
+
+  const handleEditMovie = (movie: Movie) => {
+    setSelectedMovie(movie);
+  };
+  const handleAddMovie = () => {
+    setSelectedMovie({
+      id: "",
+      title: "",
+      description: "",
+      videoUrl: "",
+      thumbnailUrl: "",
+      genre: "",
+      duration: "",
+    });
+  };
+
+  const handleSaveUser = async (updatedUser: User) => {
+    try {
+      const response = await fetch("/api/users", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedUser),
+      });
+      if (response.ok) {
+        fetchUsers(); // Refresh the users data
+        setSelectedUser(null);
+      } else {
+        console.error("Error saving user:", response);
+      }
+    } catch (error) {
+      console.error("Error saving user", error);
+    }
+  };
+
+  const handleSaveMovie = async (updatedMovie: Movie) => {
+    try {
+      let method = "PUT";
+      let url = "/api/movies";
+      if (!updatedMovie.id) {
+        method = "POST";
+      }
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedMovie),
+      });
+      if (response.ok) {
+        fetchMovies();
+        setSelectedMovie(null);
+      } else {
+        console.error("Error saving movie", response);
+      }
+    } catch (error) {
+      console.error("Error saving movie", error);
+    }
+  };
+
+    const handleDeleteMovie = async (movieToDelete: Movie) => {
+       try {
+        const response = await fetch(`/api/movies?id=${movieToDelete.id}`, {
+          method: "DELETE",
+        });
+           if(response.ok) {
+            fetchMovies();
+           } else {
+            console.error('Error deleting movie', response)
+           }
+        } catch(error) {
+            console.error('Error deleting movie', error)
+        }
+    };
+
+  const userColumns = [
+    { header: "ID", accessor: "id" as keyof User },
+    { header: "Name", accessor: "name" as keyof User },
+    {
+      header: "Image",
+      accessor: "image" as keyof User,
+      render: (user: User) =>
+        user.image ? (
+          <img
+            src={user.image}
+            alt={user.name}
+            className="h-8 w-8 rounded-full"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        ) : (
+          "No Image"
+        ),
+    },
+    { header: "Email", accessor: "email" as keyof User },
+  ];
+  const movieColumns = [
+    { header: "ID", accessor: "id" as keyof Movie },
+    { header: "Title", accessor: "title" as keyof Movie },
+    {
+      header: "Thumbnail",
+      accessor: "thumbnailUrl" as keyof Movie,
+      render: (movie: Movie) =>
+        movie.thumbnailUrl ? (
+          <img src={movie.thumbnailUrl} alt={movie.title} className="h-10 w-10 rounded" />
+        ) : (
+          "No thumbnail"
+        ),
+    },
+    { header: "Genre", accessor: "genre" as keyof Movie },
+    { header: "Duration", accessor: "duration" as keyof Movie },
+  ];
+
+  return (
+    <div className="container mx-auto p-4">
+      <Tabs defaultValue="home">
+        <TabsList>
+          <TabsTrigger value="home">Home</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="movies">Movies</TabsTrigger>
+        </TabsList>
+        <TabsContent value="home">
+          {/* Add home screen here */}
+        </TabsContent>
+        <TabsContent value="users">
+          <DataTable
+            data={users}
+            columns={userColumns}
+            onEdit={handleEditUser}
+            searchable={true}
+            className="mt-4"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+          <UserDrawer
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+            onSave={handleSaveUser}
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </TabsContent>
+        <TabsContent value="movies">
+          <div className="mb-4 flex justify-end">
+            <AddMovieButton onClick={handleAddMovie} />
+          </div>
+          <DataTable
+            data={movies}
+            columns={movieColumns}
+            onEdit={handleEditMovie}
+            onDelete={handleDeleteMovie}
+            searchable={true}
+            className="mt-4"
+          />
+          <MovieDrawer
+            movie={selectedMovie}
+            onClose={() => setSelectedMovie(null)}
+            onSave={handleSaveMovie}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
